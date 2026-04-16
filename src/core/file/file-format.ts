@@ -1,44 +1,39 @@
 import type { ImageFormat } from '../types/image-document';
 
+const JPG_EXTENSIONS = ['jpg', 'jpeg'] as const;
+const PNG_EXTENSIONS = ['png'] as const;
+const GB7_EXTENSIONS = ['gb7'] as const;
+
 export type SupportedImageFormat = ImageFormat | 'unknown';
 
-const PNG_EXTENSIONS = new Set(['png']);
-const JPG_EXTENSIONS = new Set(['jpg', 'jpeg']);
-const GB7_EXTENSIONS = new Set(['gb7']);
-
-export function getFileExtension(fileName: string): string {
-  const normalizedName = fileName.trim().toLowerCase();
-  const lastDotIndex = normalizedName.lastIndexOf('.');
-
-  if (lastDotIndex === -1 || lastDotIndex === normalizedName.length - 1) {
-    return '';
-  }
-
-  return normalizedName.slice(lastDotIndex + 1);
-}
-
-export function detectSupportedImageFormat(
-  fileName: string,
-): SupportedImageFormat {
+export function detectSupportedImageFormat(fileName: string): SupportedImageFormat {
   const extension = getFileExtension(fileName);
 
-  if (PNG_EXTENSIONS.has(extension)) {
+  if (PNG_EXTENSIONS.includes(extension as (typeof PNG_EXTENSIONS)[number])) {
     return 'png';
   }
 
-  if (JPG_EXTENSIONS.has(extension)) {
+  if (JPG_EXTENSIONS.includes(extension as (typeof JPG_EXTENSIONS)[number])) {
     return 'jpg';
   }
 
-  if (GB7_EXTENSIONS.has(extension)) {
+  if (GB7_EXTENSIONS.includes(extension as (typeof GB7_EXTENSIONS)[number])) {
     return 'gb7';
   }
 
   return 'unknown';
 }
 
-export function isBrowserDecodableFormat(
-  format: SupportedImageFormat,
-): format is Extract<ImageFormat, 'png' | 'jpg'> {
+export function isBrowserDecodableFormat(format: SupportedImageFormat): boolean {
   return format === 'png' || format === 'jpg';
+}
+
+function getFileExtension(fileName: string): string {
+  const dotIndex = fileName.lastIndexOf('.');
+
+  if (dotIndex < 0 || dotIndex === fileName.length - 1) {
+    return '';
+  }
+
+  return fileName.slice(dotIndex + 1).toLowerCase();
 }

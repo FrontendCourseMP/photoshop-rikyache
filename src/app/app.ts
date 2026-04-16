@@ -1,7 +1,6 @@
 import {
   APP_TITLE,
   DEFAULT_STATUS,
-  GB7_NOT_READY_MESSAGE,
   OPEN_FILE_ERROR_FALLBACK,
   SAVE_NOT_READY_MESSAGE,
   UNSUPPORTED_FORMAT_MESSAGE,
@@ -10,7 +9,8 @@ import { createAppState, setCurrentDocument } from './app-state';
 import { createCanvasRenderer } from '../core/canvas/canvas-renderer';
 import { CANVAS_RENDERING } from '../core/canvas/constants';
 import { decodeBrowserImageFile } from '../core/codecs/browser/browser-decoder';
-import { detectSupportedImageFormat, isBrowserDecodableFormat } from '../core/file/file-format';
+import { decodeGb7File } from '../core/codecs/gb7/gb7-decoder';
+import { detectSupportedImageFormat } from '../core/file/file-format';
 import type { ImageDocument } from '../core/types/image-document';
 import { applyThemeVariables } from '../theme/apply-theme';
 import { THEME_LAYOUT } from '../theme/layout';
@@ -176,13 +176,11 @@ async function openFile(
     return;
   }
 
-  if (!isBrowserDecodableFormat(format)) {
-    showInfo(GB7_NOT_READY_MESSAGE);
-    return;
-  }
-
   try {
-    const imageDocument = await decodeBrowserImageFile(file);
+    const imageDocument =
+      format === 'gb7'
+        ? await decodeGb7File(file)
+        : await decodeBrowserImageFile(file);
 
     setCurrentDocument(state, imageDocument);
     renderer.setDocument(imageDocument);
