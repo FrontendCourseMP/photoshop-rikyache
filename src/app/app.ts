@@ -1,21 +1,34 @@
 import {
   APP_TITLE,
   DEFAULT_STATUS,
+  INVALID_SAVE_FORMAT_MESSAGE,
+  NO_DOCUMENT_TO_SAVE_MESSAGE,
   OPEN_FILE_ERROR_FALLBACK,
-  SAVE_NOT_READY_MESSAGE,
+  SAVE_AS_PROMPT_MESSAGE,
+  SAVE_FILE_ERROR_FALLBACK,
   UNSUPPORTED_FORMAT_MESSAGE,
 } from './constants';
-import { createAppState, setCurrentDocument } from './app-state';
+import {
+  createAppState,
+  getCurrentDocument,
+  setCurrentDocument,
+} from './app-state';
 import { createCanvasRenderer } from '../core/canvas/canvas-renderer';
 import { CANVAS_RENDERING } from '../core/canvas/constants';
 import { decodeBrowserImageFile } from '../core/codecs/browser/browser-decoder';
+import {
+  encodeBrowserImageDocument,
+  type BrowserEncodableFormat,
+} from '../core/codecs/browser/browser-encoder';
 import { decodeGb7File } from '../core/codecs/gb7/gb7-decoder';
+import { encodeGb7ImageDocument } from '../core/codecs/gb7/gb7-encoder';
+import { downloadBlob, replaceFileExtension } from '../core/file/file-download';
 import { detectSupportedImageFormat } from '../core/file/file-format';
-import type { ImageDocument } from '../core/types/image-document';
+import type { ImageDocument, ImageFormat } from '../core/types/image-document';
 import { applyThemeVariables } from '../theme/apply-theme';
 import { THEME_LAYOUT } from '../theme/layout';
 import { createLayout, type AppLayout } from '../ui/layout';
-import { showError, showInfo } from '../ui/notifications';
+import { showError } from '../ui/notifications';
 import { updateStatusBar } from '../ui/statusbar';
 
 export function createApp(): void {
@@ -91,12 +104,12 @@ function bindToolbarActions(
     await openFile(selectedFile, layout, state, renderer);
   });
 
-  layout.saveButton.addEventListener('click', () => {
-    showInfo(SAVE_NOT_READY_MESSAGE);
+  layout.saveButton.addEventListener('click', async () => {
+    await saveCurrentDocument(state);
   });
 
-  layout.saveAsButton.addEventListener('click', () => {
-    showInfo(SAVE_NOT_READY_MESSAGE);
+  layout.saveAsButton.addEventListener('click', async () => {
+    await saveCurrentDocumentAs(state);
   });
 }
 
@@ -191,6 +204,99 @@ async function openFile(
 
     showError(message);
   }
+}
+
+async function saveCurrentDocument(
+  state: ReturnType<typeof createAppState>,
+): Promise<void> {
+  const currentDocument = getCurrentDocument(state);
+
+  if (currentDocument === null) {
+    showError(NO_DOCUMENT_TO_SAVE_MESSAGE);
+    return;
+  }
+
+  try {
+    const blob = await encodeDocumentByFormat(
+      currentDocument,
+      currentDocument.sourceFormat,
+    );
+
+    const fileName = replaceFileExtension(
+      currentDocument.name,
+      currentDocument.sourceFormat,
+    );
+
+    downloadBlob(blob, fileName);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : SAVE_FILE_ERROR_FALLBACK;
+
+    showError(message);
+  }
+}
+
+async function saveCurrentDocumentAs(
+  state: ReturnType<typeof createAppState>,
+): Promise<void> {
+  const currentDocument = getCurrentDocument(state);
+
+  if (currentDocument === null) {
+    showError(NO_DOCUMENT_TO_SAVE_MESSAGE);
+    return;
+  }
+
+  const requestedFormat = requestSaveFormat();
+
+  if (requestedFormat === null) {
+    return;
+  }
+
+  try {
+    const blob = await encodeDocumentByFormat(currentDocument, requestedFormat);
+    const fileName = replaceFileExtension(currentDocument.name, requestedFormat);
+
+    downloadBlob(blob, fileName);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : SAVE_FILE_ERROR_FALLBACK;
+
+    showError(message);
+  }
+}
+
+async function encodeDocumentByFormat(
+  imageDocument: ImageDocument,
+  format: ImageFormat,
+): Promise<Blob> {
+  if (format === 'png' || format === 'jpg') {
+    return await encodeBrowserImageDocument(
+      imageDocument,
+      format as BrowserEncodableFormat,
+    );
+  }
+
+  return await encodeGb7ImageDocument(imageDocument);
+}
+
+function requestSaveFormat(): ImageFormat | null {
+  const response = window.prompt(
+    SAVE_AS_PROMPT_MESSAGE,
+    'png',
+  );
+
+  if (response === null) {
+    return null;
+  }
+
+  const normalized = response.trim().toLowerCase();
+
+  if (normalized === 'png' || normalized === 'jpg' || normalized === 'gb7') {
+    return normalized;
+  }
+
+  showError(INVALID_SAVE_FORMAT_MESSAGE);
+  return null;
 }
 
 function syncStatusBar(layout: AppLayout, imageDocument: ImageDocument): void {

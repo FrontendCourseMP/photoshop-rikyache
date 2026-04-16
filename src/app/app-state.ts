@@ -16,3 +16,7 @@ export function setCurrentDocument(
 ): void {
   state.currentDocument = imageDocument;
 }
+
+export function getCurrentDocument(state: AppState): ImageDocument | null {
+  return state.currentDocument;
+}

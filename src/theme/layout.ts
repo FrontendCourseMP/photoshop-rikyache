@@ -11,6 +11,6 @@ export const THEME_LAYOUT = {
   pagePadding: 18,
   pagePaddingCompact: 10,
 
-  maxCanvasWidth: 1180,
-  maxCanvasHeight: 820,
+  maxCanvasWidth: 1580,
+  maxCanvasHeight: 920,
 } as const;
