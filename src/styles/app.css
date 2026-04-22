@@ -80,7 +80,64 @@ body {
 .content {
   min-height: 0;
   display: grid;
-  grid-template-columns: var(--layout-sidebar-width) minmax(0, 1fr);
+  grid-template-columns: var(--layout-sidebar-width) minmax(0, 1fr) 240px;
+}
+
+.channels-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-sidebar-background);
+  border-left: 1px solid var(--color-border-strong);
+  padding: 16px;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.channels-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.channel-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--color-app-background);
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease, opacity 0.2s ease;
+}
+
+.channel-item:hover {
+  background: var(--color-button-ghost-hover);
+}
+
+.channel-item.is-active {
+  border-color: var(--color-focus-ring);
+}
+
+.channel-item.is-disabled {
+  opacity: 0.5;
+}
+
+.channel-preview {
+  width: 100%;
+  aspect-ratio: 1.5;
+  background: #000;
+  border-radius: 4px;
+  display: block;
+}
+
+.channel-label {
+  font-size: 12px;
+  color: var(--color-text-primary);
+  text-align: center;
 }
 
 .sidebar {
@@ -108,14 +165,38 @@ body {
   border-radius: 14px;
   background: var(--color-tool-button-background);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   transition:
     transform 0.12s ease,
     background-color 0.15s ease;
 }
 
+.tool-button-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-topbar-background);
+}
+
+.tool-button-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
 .tool-button:hover {
   transform: translateY(-1px);
   background: var(--color-tool-button-hover);
+}
+
+.tool-button.is-active {
+  background: var(--color-focus-ring);
+  transform: scale(1.05);
 }
 
 .workspace {

@@ -1,9 +1,13 @@
 import { CANVAS_RENDERING } from './constants';
 import type { ImageDocument } from '../types/image-document';
+import type { AppChannels } from '../../app/app-state';
 
 export interface CanvasRenderer {
   resize(width: number, height: number): void;
   setDocument(imageDocument: ImageDocument | null): void;
+  setChannels(channels: AppChannels): void;
+  getPixelAt(x: number, y: number): { r: number; g: number; b: number; a: number } | null;
+  getCanvasCoordinates(clientX: number, clientY: number): { x: number; y: number } | null;
 }
 
 export function createCanvasRenderer(
@@ -23,6 +27,7 @@ export function createCanvasRenderer(
 
   let currentDocument: ImageDocument | null = null;
   let sourceCanvas: HTMLCanvasElement | null = null;
+  let currentChannels: AppChannels = { r: true, g: true, b: true, a: true };
 
   function resize(width: number, height: number): void {
     viewportWidth = Math.max(1, Math.floor(width));
@@ -44,6 +49,50 @@ export function createCanvasRenderer(
     currentDocument = imageDocument;
     sourceCanvas = imageDocument ? createSourceCanvas(imageDocument) : null;
     render();
+  }
+
+  function setChannels(channels: AppChannels): void {
+    currentChannels = { ...channels };
+    render();
+  }
+
+  function getPixelAt(x: number, y: number): { r: number; g: number; b: number; a: number } | null {
+    if (!currentDocument || x < 0 || y < 0 || x >= currentDocument.width || y >= currentDocument.height) {
+      return null;
+    }
+
+    const index = (Math.floor(y) * currentDocument.width + Math.floor(x)) * 4;
+    return {
+      r: currentDocument.pixels[index],
+      g: currentDocument.pixels[index + 1],
+      b: currentDocument.pixels[index + 2],
+      a: currentDocument.pixels[index + 3],
+    };
+  }
+
+  function getCanvasCoordinates(clientX: number, clientY: number): { x: number; y: number } | null {
+    if (!currentDocument) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    const fitRect = getFitRect(
+      currentDocument.width,
+      currentDocument.height,
+      viewportWidth,
+      viewportHeight,
+      CANVAS_RENDERING.imagePadding,
+    );
+
+    const xInViewport = clientX - rect.left;
+    const yInViewport = clientY - rect.top;
+
+    const xInImage = ((xInViewport - fitRect.x) / fitRect.width) * currentDocument.width;
+    const yInImage = ((yInViewport - fitRect.y) / fitRect.height) * currentDocument.height;
+
+    if (xInImage < 0 || xInImage >= currentDocument.width || yInImage < 0 || yInImage >= currentDocument.height) {
+      return null;
+    }
+
+    return { x: xInImage, y: yInImage };
   }
 
   function render(): void {
@@ -70,13 +119,33 @@ export function createCanvasRenderer(
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
 
-    context.drawImage(
-      sourceCanvas,
-      fitRect.x,
-      fitRect.y,
-      fitRect.width,
-      fitRect.height,
-    );
+    // Apply channel filtering if necessary
+    const isFiltering = !currentChannels.r || !currentChannels.g || !currentChannels.b || !currentChannels.a;
+
+    if (isFiltering) {
+      const filteredCanvas = document.createElement('canvas');
+      filteredCanvas.width = currentDocument.width;
+      filteredCanvas.height = currentDocument.height;
+      const filteredCtx = filteredCanvas.getContext('2d')!;
+      const imageData = createSourceImageData(currentDocument, currentChannels);
+      filteredCtx.putImageData(imageData, 0, 0);
+
+      context.drawImage(
+        filteredCanvas,
+        fitRect.x,
+        fitRect.y,
+        fitRect.width,
+        fitRect.height,
+      );
+    } else {
+      context.drawImage(
+        sourceCanvas,
+        fitRect.x,
+        fitRect.y,
+        fitRect.width,
+        fitRect.height,
+      );
+    }
   }
 
   resize(viewportWidth, viewportHeight);
@@ -84,7 +153,40 @@ export function createCanvasRenderer(
   return {
     resize,
     setDocument,
+    setChannels,
+    getPixelAt,
+    getCanvasCoordinates,
   };
+}
+
+function createSourceImageData(imageDocument: ImageDocument, channels: AppChannels): ImageData {
+  const pixelBuffer = new Uint8ClampedArray(imageDocument.pixels);
+
+  if (!channels.r || !channels.g || !channels.b || !channels.a) {
+    for (let i = 0; i < pixelBuffer.length; i += 4) {
+      if (!channels.r) pixelBuffer[i] = 0;
+      if (!channels.g) pixelBuffer[i + 1] = 0;
+      if (!channels.b) pixelBuffer[i + 2] = 0;
+      if (!channels.a) pixelBuffer[i + 3] = 255; // If only alpha is selected, we might want to see it as a mask, but here we just toggle visibility
+    }
+
+    // Special case: if only Alpha is selected, show it as a grayscale mask
+    if (!channels.r && !channels.g && !channels.b && channels.a) {
+      for (let i = 0; i < pixelBuffer.length; i += 4) {
+        const alpha = imageDocument.pixels[i + 3];
+        pixelBuffer[i] = alpha;
+        pixelBuffer[i + 1] = alpha;
+        pixelBuffer[i + 2] = alpha;
+        pixelBuffer[i + 3] = 255;
+      }
+    }
+  }
+
+  return new ImageData(
+    pixelBuffer,
+    imageDocument.width,
+    imageDocument.height,
+  );
 }
 
 function createSourceCanvas(imageDocument: ImageDocument): HTMLCanvasElement {
@@ -100,14 +202,7 @@ function createSourceCanvas(imageDocument: ImageDocument): HTMLCanvasElement {
 
   const sourceContext: CanvasRenderingContext2D = sourceContextCandidate;
 
-  const pixelBuffer = new Uint8ClampedArray(imageDocument.pixels);
-
-  const imageData = new ImageData(
-    pixelBuffer,
-    imageDocument.width,
-    imageDocument.height,
-  );
-
+  const imageData = createSourceImageData(imageDocument, { r: true, g: true, b: true, a: true });
   sourceContext.putImageData(imageData, 0, 0);
 
   return sourceCanvas;

@@ -1,13 +1,34 @@
 import type { ImageDocument } from '../core/types/image-document';
 
+export type AppTool = 'pointer' | 'eyedropper';
+
+export interface AppChannels {
+  r: boolean;
+  g: boolean;
+  b: boolean;
+  a: boolean;
+}
+
 export interface AppState {
   currentDocument: ImageDocument | null;
+  activeTool: AppTool;
+  channels: AppChannels;
 }
 
 export function createAppState(): AppState {
   return {
     currentDocument: null,
+    activeTool: 'pointer',
+    channels: { r: true, g: true, b: true, a: true },
   };
+}
+
+export function setActiveTool(state: AppState, tool: AppTool): void {
+  state.activeTool = tool;
+}
+
+export function setChannels(state: AppState, channels: Partial<AppChannels>): void {
+  state.channels = { ...state.channels, ...channels };
 }
 
 export function setCurrentDocument(

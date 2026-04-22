@@ -12,6 +12,10 @@ import {
   createAppState,
   getCurrentDocument,
   setCurrentDocument,
+  setActiveTool,
+  setChannels,
+  type AppState,
+  type AppChannels,
 } from './app-state';
 import { createCanvasRenderer } from '../core/canvas/canvas-renderer';
 import { CANVAS_RENDERING } from '../core/canvas/constants';
@@ -28,8 +32,10 @@ import type { ImageDocument, ImageFormat } from '../core/types/image-document';
 import { applyThemeVariables } from '../theme/apply-theme';
 import { THEME_LAYOUT } from '../theme/layout';
 import { createLayout, type AppLayout } from '../ui/layout';
+import { updateChannelPreviews } from '../ui/channels';
 import { showError } from '../ui/notifications';
 import { updateStatusBar } from '../ui/statusbar';
+import { rgbToLab } from '../utils/color';
 
 export function createApp(): void {
   applyThemeVariables();
@@ -44,6 +50,88 @@ export function createApp(): void {
   bindCanvasResize(layout, renderer);
   bindToolbarActions(layout, state, renderer);
   bindDragAndDrop(layout, state, renderer);
+  bindToolSwitching(layout, state);
+  bindCanvasEvents(layout, state, renderer);
+  bindChannelsEvents(layout, state, renderer);
+}
+
+function bindChannelsEvents(
+  layout: AppLayout,
+  state: AppState,
+  renderer: ReturnType<typeof createCanvasRenderer>
+): void {
+  layout.channelsPanel.root.addEventListener('click', (event) => {
+    const item = (event.target as HTMLElement).closest('.channel-item') as HTMLElement;
+    if (!item) return;
+
+    const channelId = item.dataset.channelId as keyof AppChannels;
+    if (channelId) {
+      const newValue = !state.channels[channelId];
+      setChannels(state, { [channelId]: newValue });
+      
+      // Update UI
+      if (newValue) {
+        item.classList.add('is-active');
+        item.classList.remove('is-disabled');
+      } else {
+        item.classList.remove('is-active');
+        item.classList.add('is-disabled');
+      }
+
+      // Update Renderer
+      renderer.setChannels(state.channels);
+    }
+  });
+}
+
+function bindToolSwitching(layout: AppLayout, state: AppState): void {
+  layout.sideBar.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest('.tool-button') as HTMLButtonElement;
+    if (!button) return;
+
+    const toolId = button.dataset.toolId as any;
+    if (toolId) {
+      setActiveTool(state, toolId);
+      
+      // Update UI
+      layout.sideBar.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('is-active'));
+      button.classList.add('is-active');
+    }
+  });
+}
+
+function bindCanvasEvents(
+  layout: AppLayout,
+  state: AppState,
+  renderer: ReturnType<typeof createCanvasRenderer>
+): void {
+  layout.canvas.addEventListener('mousedown', (event) => {
+    if (state.activeTool === 'eyedropper' && state.currentDocument) {
+      const coords = renderer.getCanvasCoordinates(event.clientX, event.clientY);
+      if (coords) {
+        const pixel = renderer.getPixelAt(coords.x, coords.y);
+        if (pixel) {
+          const lab = rgbToLab(pixel.r, pixel.g, pixel.b);
+          updateStatusBar(layout.statusBar, {
+            format: state.currentDocument.sourceFormat.toUpperCase(),
+            width: state.currentDocument.width,
+            height: state.currentDocument.height,
+            colorDepth: state.currentDocument.colorDepth,
+            hasMask: state.currentDocument.hasMask,
+            pixelInfo: {
+              x: coords.x,
+              y: coords.y,
+              r: pixel.r,
+              g: pixel.g,
+              b: pixel.b,
+              a: pixel.a,
+              lab
+            }
+          });
+        }
+      }
+    }
+  });
 }
 
 function bindCanvasResize(
@@ -201,6 +289,7 @@ async function openFile(
 
     setCurrentDocument(state, imageDocument);
     renderer.setDocument(imageDocument);
+    updateChannelPreviews(layout.channelsPanel, imageDocument);
     syncStatusBar(layout, imageDocument);
   } catch (error) {
     const message =

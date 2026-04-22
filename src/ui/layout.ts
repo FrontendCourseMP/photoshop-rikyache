@@ -2,6 +2,7 @@ import { FILE_INPUT_ACCEPT } from './constants';
 import { createSidebar } from './sidebar';
 import { createStatusBar } from './statusbar';
 import { createToolbar } from './toolbar';
+import { createChannelsPanel, type ChannelPanelElements } from './channels';
 import { createElement } from '../utils/dom';
 
 export interface AppLayout {
@@ -11,6 +12,7 @@ export interface AppLayout {
   workspace: HTMLElement;
   canvas: HTMLCanvasElement;
   statusBar: HTMLElement;
+  channelsPanel: ChannelPanelElements;
   fileInput: HTMLInputElement;
   loadButton: HTMLButtonElement;
   saveButton: HTMLButtonElement;
@@ -23,6 +25,7 @@ export function createLayout(container: HTMLElement): AppLayout {
   const toolbar = createToolbar();
   const sidebar = createSidebar();
   const statusBar = createStatusBar();
+  const channelsPanel = createChannelsPanel();
 
   const content = createElement('div', 'content');
   const workspace = createElement('main', 'workspace');
@@ -32,7 +35,7 @@ export function createLayout(container: HTMLElement): AppLayout {
   canvas.setAttribute('aria-label', 'Область просмотра изображения');
 
   workspace.appendChild(canvas);
-  content.append(sidebar.root, workspace);
+  content.append(sidebar.root, workspace, channelsPanel.root);
 
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
@@ -49,6 +52,7 @@ export function createLayout(container: HTMLElement): AppLayout {
     workspace,
     canvas,
     statusBar,
+    channelsPanel,
     fileInput,
     loadButton: toolbar.loadButton,
     saveButton: toolbar.saveButton,
