@@ -230,3 +230,54 @@ body {
     max-width: 300px;
   }
 }
+
+@media (max-width: 500px) {
+  .content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .sidebar {
+    order: 2;
+    padding: 12px 10px;
+    border-top: 1px solid var(--color-border-strong);
+    background: var(--color-topbar-background);
+  }
+
+  .sidebar-rail {
+    flex-direction: row;
+    gap: 12px;
+    padding: 8px 12px;
+    width: 100%;
+    justify-content: center;
+    border-radius: 16px;
+  }
+
+  .tool-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .workspace {
+    order: 1;
+    flex: 1;
+    padding: 8px;
+  }
+
+  .topbar {
+    justify-content: space-between;
+  }
+
+  .topbar-button {
+    flex: 1;
+    text-align: center;
+    padding: 6px 4px;
+    font-size: 12px;
+  }
+
+  .statusbar {
+    font-size: 12px;
+    height: var(--layout-statusbar-height);
+  }
+}

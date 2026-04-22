@@ -53,14 +53,18 @@ function bindCanvasResize(
   const resizeCanvas = (): void => {
     const workspaceRect = layout.workspace.getBoundingClientRect();
 
+    const style = window.getComputedStyle(layout.workspace);
+    const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+    const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+
     const availableWidth = Math.max(
       1,
-      Math.floor(workspaceRect.width - THEME_LAYOUT.pagePadding * 2),
+      Math.floor(workspaceRect.width - (isNaN(paddingX) ? THEME_LAYOUT.pagePadding * 2 : paddingX)),
     );
 
     const availableHeight = Math.max(
       1,
-      Math.floor(workspaceRect.height - THEME_LAYOUT.pagePadding * 2),
+      Math.floor(workspaceRect.height - (isNaN(paddingY) ? THEME_LAYOUT.pagePadding * 2 : paddingY)),
     );
 
     const nextWidth =
