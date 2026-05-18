@@ -1,11 +1,19 @@
 import { CANVAS_RENDERING } from './constants';
 import type { ImageDocument } from '../types/image-document';
 import type { AppChannels } from '../../app/app-state';
+import { resizeImageDocument } from '../interpolation/resize-image';
+import {
+  DEFAULT_INTERPOLATION_METHOD,
+  type InterpolationMethod,
+} from '../interpolation/interpolation-types';
 
 export interface CanvasRenderer {
   resize(width: number, height: number): void;
   setDocument(imageDocument: ImageDocument | null): void;
   setChannels(channels: AppChannels): void;
+  setInterpolationMethod(method: InterpolationMethod): void;
+  setViewScalePercent(scalePercent: number): void;
+  getFitScalePercent(imageDocument: ImageDocument, padding: number): number;
   getPixelAt(x: number, y: number): { r: number; g: number; b: number; a: number } | null;
   getCanvasCoordinates(clientX: number, clientY: number): { x: number; y: number } | null;
 }
@@ -26,8 +34,10 @@ export function createCanvasRenderer(
   let devicePixelRatioValue: number = Math.max(1, window.devicePixelRatio || 1);
 
   let currentDocument: ImageDocument | null = null;
-  let sourceCanvas: HTMLCanvasElement | null = null;
   let currentChannels: AppChannels = { r: true, g: true, b: true, a: true };
+  let interpolationMethod: InterpolationMethod = DEFAULT_INTERPOLATION_METHOD;
+  let viewScalePercent = 100;
+  let lastImageRect: { x: number; y: number; width: number; height: number } | null = null;
 
   function resize(width: number, height: number): void {
     viewportWidth = Math.max(1, Math.floor(width));
@@ -47,13 +57,33 @@ export function createCanvasRenderer(
 
   function setDocument(imageDocument: ImageDocument | null): void {
     currentDocument = imageDocument;
-    sourceCanvas = imageDocument ? createSourceCanvas(imageDocument) : null;
     render();
   }
 
   function setChannels(channels: AppChannels): void {
     currentChannels = { ...channels };
     render();
+  }
+
+  function setInterpolationMethod(method: InterpolationMethod): void {
+    interpolationMethod = method;
+    render();
+  }
+
+  function setViewScalePercent(scalePercent: number): void {
+    viewScalePercent = clamp(scalePercent, 12, 300);
+    render();
+  }
+
+  function getFitScalePercent(imageDocument: ImageDocument, padding: number): number {
+    const availableWidth = Math.max(1, viewportWidth - padding * 2);
+    const availableHeight = Math.max(1, viewportHeight - padding * 2);
+    const fitScale = Math.min(
+      availableWidth / imageDocument.width,
+      availableHeight / imageDocument.height,
+    );
+
+    return clamp(Math.floor(fitScale * 100), 12, 300);
   }
 
   function getPixelAt(x: number, y: number): { r: number; g: number; b: number; a: number } | null {
@@ -71,22 +101,14 @@ export function createCanvasRenderer(
   }
 
   function getCanvasCoordinates(clientX: number, clientY: number): { x: number; y: number } | null {
-    if (!currentDocument) return null;
+    if (!currentDocument || lastImageRect === null) return null;
 
     const rect = canvas.getBoundingClientRect();
-    const fitRect = getFitRect(
-      currentDocument.width,
-      currentDocument.height,
-      viewportWidth,
-      viewportHeight,
-      CANVAS_RENDERING.imagePadding,
-    );
-
     const xInViewport = clientX - rect.left;
     const yInViewport = clientY - rect.top;
 
-    const xInImage = ((xInViewport - fitRect.x) / fitRect.width) * currentDocument.width;
-    const yInImage = ((yInViewport - fitRect.y) / fitRect.height) * currentDocument.height;
+    const xInImage = ((xInViewport - lastImageRect.x) / lastImageRect.width) * currentDocument.width;
+    const yInImage = ((yInViewport - lastImageRect.y) / lastImageRect.height) * currentDocument.height;
 
     if (xInImage < 0 || xInImage >= currentDocument.width || yInImage < 0 || yInImage >= currentDocument.height) {
       return null;
@@ -103,49 +125,32 @@ export function createCanvasRenderer(
     context.fillStyle = readCssVariable('--color-canvas-background', '#1d1d1d');
     context.fillRect(0, 0, viewportWidth, viewportHeight);
 
-    if (currentDocument === null || sourceCanvas === null) {
+    lastImageRect = null;
+
+    if (currentDocument === null) {
       drawEmptyState(context, viewportWidth, viewportHeight);
       return;
     }
 
-    const fitRect = getFitRect(
+    const imageRect = getScaledRect(
       currentDocument.width,
       currentDocument.height,
       viewportWidth,
       viewportHeight,
-      CANVAS_RENDERING.imagePadding,
+      viewScalePercent,
     );
 
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = 'high';
+    const displayDocument = resizeImageDocument(
+      createDisplayDocument(currentDocument, currentChannels),
+      imageRect.width,
+      imageRect.height,
+      interpolationMethod,
+    );
+    const displayCanvas = createSourceCanvas(displayDocument);
 
-    // Apply channel filtering if necessary
-    const isFiltering = !currentChannels.r || !currentChannels.g || !currentChannels.b || !currentChannels.a;
-
-    if (isFiltering) {
-      const filteredCanvas = document.createElement('canvas');
-      filteredCanvas.width = currentDocument.width;
-      filteredCanvas.height = currentDocument.height;
-      const filteredCtx = filteredCanvas.getContext('2d')!;
-      const imageData = createSourceImageData(currentDocument, currentChannels);
-      filteredCtx.putImageData(imageData, 0, 0);
-
-      context.drawImage(
-        filteredCanvas,
-        fitRect.x,
-        fitRect.y,
-        fitRect.width,
-        fitRect.height,
-      );
-    } else {
-      context.drawImage(
-        sourceCanvas,
-        fitRect.x,
-        fitRect.y,
-        fitRect.width,
-        fitRect.height,
-      );
-    }
+    context.imageSmoothingEnabled = false;
+    context.drawImage(displayCanvas, imageRect.x, imageRect.y);
+    lastImageRect = imageRect;
   }
 
   resize(viewportWidth, viewportHeight);
@@ -154,8 +159,21 @@ export function createCanvasRenderer(
     resize,
     setDocument,
     setChannels,
+    setInterpolationMethod,
+    setViewScalePercent,
+    getFitScalePercent,
     getPixelAt,
     getCanvasCoordinates,
+  };
+}
+
+function createDisplayDocument(
+  imageDocument: ImageDocument,
+  channels: AppChannels,
+): ImageDocument {
+  return {
+    ...imageDocument,
+    pixels: createSourceImageData(imageDocument, channels).data,
   };
 }
 
@@ -208,21 +226,14 @@ function createSourceCanvas(imageDocument: ImageDocument): HTMLCanvasElement {
   return sourceCanvas;
 }
 
-function getFitRect(
+function getScaledRect(
   imageWidth: number,
   imageHeight: number,
   viewportWidth: number,
   viewportHeight: number,
-  padding: number,
+  scalePercent: number,
 ): { x: number; y: number; width: number; height: number } {
-  const availableWidth = Math.max(1, viewportWidth - padding * 2);
-  const availableHeight = Math.max(1, viewportHeight - padding * 2);
-
-  const scale = Math.min(
-    availableWidth / imageWidth,
-    availableHeight / imageHeight,
-  );
-
+  const scale = scalePercent / 100;
   const drawWidth = Math.max(1, Math.round(imageWidth * scale));
   const drawHeight = Math.max(1, Math.round(imageHeight * scale));
 
@@ -264,4 +275,8 @@ function readCssVariable(variableName: string, fallback: string): string {
     .trim();
 
   return value || fallback;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }

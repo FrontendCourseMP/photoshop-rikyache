@@ -14,6 +14,8 @@ import {
   setCurrentDocument,
   setActiveTool,
   setChannels,
+  setInterpolationMethod,
+  setViewScalePercent,
   type AppState,
   type AppChannels,
 } from './app-state';
@@ -34,8 +36,9 @@ import { THEME_LAYOUT } from '../theme/layout';
 import { createLayout, type AppLayout } from '../ui/layout';
 import { updateChannelPreviews } from '../ui/channels';
 import { openLevelsDialog } from '../ui/levels-dialog';
+import { openResizeDialog } from '../ui/resize-dialog';
 import { showError } from '../ui/notifications';
-import { updateStatusBar } from '../ui/statusbar';
+import { updateStatusBar, updateZoomStatus } from '../ui/statusbar';
 import { rgbToLab } from '../utils/color';
 
 export function createApp(): void {
@@ -51,6 +54,7 @@ export function createApp(): void {
   bindCanvasResize(layout, renderer);
   bindToolbarActions(layout, state, renderer);
   bindDragAndDrop(layout, state, renderer);
+  bindZoomControls(layout, state, renderer);
   bindToolSwitching(layout, state, renderer);
   bindCanvasEvents(layout, state, renderer);
   bindChannelsEvents(layout, state, renderer);
@@ -101,12 +105,56 @@ function bindToolSwitching(
         return;
       }
 
+      if (toolId === 'resize') {
+        openResizeTool(layout, state, renderer);
+        return;
+      }
+
       setActiveTool(state, toolId);
       
       // Update UI
       layout.sideBar.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('is-active'));
       button.classList.add('is-active');
     }
+  });
+}
+
+function openResizeTool(
+  layout: AppLayout,
+  state: AppState,
+  renderer: ReturnType<typeof createCanvasRenderer>,
+): void {
+  const currentDocument = getCurrentDocument(state);
+
+  if (currentDocument === null) {
+    showError(NO_DOCUMENT_TO_SAVE_MESSAGE);
+    return;
+  }
+
+  if (document.querySelector('.resize-dialog-overlay') !== null) {
+    return;
+  }
+
+  openResizeDialog(currentDocument, state.interpolationMethod, {
+    onApply: (imageDocument, method) => {
+      setInterpolationMethod(state, method);
+      renderer.setInterpolationMethod(method);
+      syncDocument(layout, state, renderer, imageDocument);
+    },
+  });
+}
+
+function bindZoomControls(
+  layout: AppLayout,
+  state: AppState,
+  renderer: ReturnType<typeof createCanvasRenderer>,
+): void {
+  layout.statusBar.zoomRange.addEventListener('input', () => {
+    const scalePercent = Number(layout.statusBar.zoomRange.value);
+
+    setViewScalePercent(state, scalePercent);
+    renderer.setViewScalePercent(scalePercent);
+    updateZoomStatus(layout.statusBar, scalePercent);
   });
 }
 
@@ -326,10 +374,12 @@ async function openFile(
         ? await decodeGb7File(file)
         : await decodeBrowserImageFile(file);
 
-    setCurrentDocument(state, imageDocument);
-    renderer.setDocument(imageDocument);
-    updateChannelPreviews(layout.channelsPanel, imageDocument);
-    syncStatusBar(layout, imageDocument);
+    const fitScalePercent = renderer.getFitScalePercent(imageDocument, 50);
+
+    setViewScalePercent(state, fitScalePercent);
+    renderer.setViewScalePercent(fitScalePercent);
+    updateZoomStatus(layout.statusBar, fitScalePercent);
+    syncDocument(layout, state, renderer, imageDocument);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : OPEN_FILE_ERROR_FALLBACK;

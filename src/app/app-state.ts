@@ -1,6 +1,10 @@
 import type { ImageDocument } from '../core/types/image-document';
+import {
+  DEFAULT_INTERPOLATION_METHOD,
+  type InterpolationMethod,
+} from '../core/interpolation/interpolation-types';
 
-export type AppTool = 'pointer' | 'eyedropper' | 'levels';
+export type AppTool = 'pointer' | 'eyedropper' | 'levels' | 'resize';
 
 export interface AppChannels {
   r: boolean;
@@ -13,6 +17,8 @@ export interface AppState {
   currentDocument: ImageDocument | null;
   activeTool: AppTool;
   channels: AppChannels;
+  viewScalePercent: number;
+  interpolationMethod: InterpolationMethod;
 }
 
 export function createAppState(): AppState {
@@ -20,6 +26,8 @@ export function createAppState(): AppState {
     currentDocument: null,
     activeTool: 'pointer',
     channels: { r: true, g: true, b: true, a: true },
+    viewScalePercent: 100,
+    interpolationMethod: DEFAULT_INTERPOLATION_METHOD,
   };
 }
 
@@ -29,6 +37,17 @@ export function setActiveTool(state: AppState, tool: AppTool): void {
 
 export function setChannels(state: AppState, channels: Partial<AppChannels>): void {
   state.channels = { ...state.channels, ...channels };
+}
+
+export function setViewScalePercent(state: AppState, scalePercent: number): void {
+  state.viewScalePercent = scalePercent;
+}
+
+export function setInterpolationMethod(
+  state: AppState,
+  method: InterpolationMethod,
+): void {
+  state.interpolationMethod = method;
 }
 
 export function setCurrentDocument(

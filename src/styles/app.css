@@ -225,13 +225,37 @@ body {
 .statusbar {
   display: flex;
   align-items: center;
+  gap: 14px;
+  justify-content: space-between;
   padding: 0 14px;
-  overflow-x: auto;
-  white-space: nowrap;
   font-size: 14px;
   color: var(--color-text-primary);
   background: var(--color-statusbar-background);
   border-top: 1px solid var(--color-border-soft);
+}
+
+.statusbar-info {
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.statusbar-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  color: var(--color-text-secondary);
+}
+
+.statusbar-zoom input {
+  width: 150px;
+}
+
+.statusbar-zoom-value {
+  min-width: 42px;
+  color: var(--color-text-primary);
+  text-align: right;
 }
 
 .notifications {
@@ -454,6 +478,153 @@ body {
   background: transparent;
 }
 
+.resize-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 910;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.48);
+}
+
+.resize-dialog {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  color: var(--color-text-primary);
+  background: var(--color-topbar-background);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.38);
+}
+
+.resize-dialog-header,
+.resize-summary,
+.resize-dialog-footer {
+  display: flex;
+  align-items: center;
+}
+
+.resize-dialog-header {
+  justify-content: space-between;
+}
+
+.resize-dialog-title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.resize-icon-button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.resize-summary {
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+}
+
+.resize-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.resize-field,
+.resize-checkbox-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.resize-checkbox-field {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+}
+
+.resize-field-label {
+  color: var(--color-text-secondary);
+}
+
+.resize-select,
+.resize-number-input {
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  background: var(--color-sidebar-background);
+}
+
+.resize-method-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.resize-method-row .resize-select {
+  flex: 1;
+}
+
+.resize-method-tooltip {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 50%;
+  color: var(--color-text-primary);
+  cursor: help;
+}
+
+.resize-error {
+  min-height: 18px;
+  font-size: 13px;
+  color: #ffb4b4;
+}
+
+.resize-dialog-footer {
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.resize-primary-button,
+.resize-secondary-button {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.resize-primary-button {
+  border-color: var(--color-focus-ring);
+  background: var(--color-focus-ring);
+}
+
+.resize-secondary-button {
+  background: transparent;
+}
+
 @media (max-width: 760px) {
   .content {
     grid-template-columns: var(--layout-sidebar-width-compact) minmax(0, 1fr);
@@ -494,6 +665,11 @@ body {
   }
 
   .levels-dialog {
+    max-height: calc(100vh - 36px);
+    overflow-y: auto;
+  }
+
+  .resize-dialog {
     max-height: calc(100vh - 36px);
     overflow-y: auto;
   }
@@ -545,7 +721,18 @@ body {
   }
 
   .statusbar {
+    flex-wrap: wrap;
+    align-content: center;
+    gap: 4px;
     font-size: 12px;
     height: var(--layout-statusbar-height);
+  }
+
+  .statusbar-zoom input {
+    width: 96px;
+  }
+
+  .resize-form {
+    grid-template-columns: 1fr;
   }
 }

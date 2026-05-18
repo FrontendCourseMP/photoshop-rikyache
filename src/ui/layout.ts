@@ -1,6 +1,6 @@
 import { FILE_INPUT_ACCEPT } from './constants';
 import { createSidebar } from './sidebar';
-import { createStatusBar } from './statusbar';
+import { createStatusBar, type StatusBarElements } from './statusbar';
 import { createToolbar } from './toolbar';
 import { createChannelsPanel, type ChannelPanelElements } from './channels';
 import { createElement } from '../utils/dom';
@@ -11,7 +11,7 @@ export interface AppLayout {
   sideBar: HTMLElement;
   workspace: HTMLElement;
   canvas: HTMLCanvasElement;
-  statusBar: HTMLElement;
+  statusBar: StatusBarElements;
   channelsPanel: ChannelPanelElements;
   fileInput: HTMLInputElement;
   loadButton: HTMLButtonElement;
@@ -42,7 +42,7 @@ export function createLayout(container: HTMLElement): AppLayout {
   fileInput.accept = FILE_INPUT_ACCEPT;
   fileInput.hidden = true;
 
-  root.append(toolbar.root, content, statusBar, fileInput);
+  root.append(toolbar.root, content, statusBar.root, fileInput);
   container.appendChild(root);
 
   return {

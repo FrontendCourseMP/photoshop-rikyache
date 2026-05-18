@@ -26,4 +26,9 @@ export const ICONS = {
       <path d="M6 40h36v3H6v-3Z"/>
     </svg>
   `,
+  resize: `
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M9 9h13v4h-6.2l8.6 8.6-2.8 2.8-8.6-8.6V22H9V9Zm17 0h13v13h-4v-6.2l-8.6 8.6-2.8-2.8 8.6-8.6H26V9ZM21.6 23.6l2.8 2.8-8.6 8.6H22v4H9V26h4v6.2l8.6-8.6Zm4.8 2.8 2.8-2.8 8.6 8.6V26h4v13H29v-4h6.2l-8.8-8.6Z"/>
+    </svg>
+  `,
 } as const;
