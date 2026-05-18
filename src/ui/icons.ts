@@ -20,4 +20,10 @@ export const ICONS = {
         c12.5,9.7,30.5,7.5,40.3-5l12.5-16.1c3.1-4,7.7-6.6,12.8-7.1c5.1-0.6,10.1,0.9,14.1,4.1C300,38.8,301.1,51.1,294.4,59.6z"/>
     </svg>
   `,
+  levels: `
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M8 36h4V20H8v16Zm7 0h4V12h-4v24Zm7 0h4V26h-4v10Zm7 0h4V8h-4v28Zm7 0h4V18h-4v18Z"/>
+      <path d="M6 40h36v3H6v-3Z"/>
+    </svg>
+  `,
 } as const;

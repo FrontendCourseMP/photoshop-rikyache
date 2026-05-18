@@ -33,6 +33,7 @@ import { applyThemeVariables } from '../theme/apply-theme';
 import { THEME_LAYOUT } from '../theme/layout';
 import { createLayout, type AppLayout } from '../ui/layout';
 import { updateChannelPreviews } from '../ui/channels';
+import { openLevelsDialog } from '../ui/levels-dialog';
 import { showError } from '../ui/notifications';
 import { updateStatusBar } from '../ui/statusbar';
 import { rgbToLab } from '../utils/color';
@@ -50,7 +51,7 @@ export function createApp(): void {
   bindCanvasResize(layout, renderer);
   bindToolbarActions(layout, state, renderer);
   bindDragAndDrop(layout, state, renderer);
-  bindToolSwitching(layout, state);
+  bindToolSwitching(layout, state, renderer);
   bindCanvasEvents(layout, state, renderer);
   bindChannelsEvents(layout, state, renderer);
 }
@@ -84,19 +85,57 @@ function bindChannelsEvents(
   });
 }
 
-function bindToolSwitching(layout: AppLayout, state: AppState): void {
+function bindToolSwitching(
+  layout: AppLayout,
+  state: AppState,
+  renderer: ReturnType<typeof createCanvasRenderer>,
+): void {
   layout.sideBar.addEventListener('click', (event) => {
     const button = (event.target as HTMLElement).closest('.tool-button') as HTMLButtonElement;
     if (!button) return;
 
-    const toolId = button.dataset.toolId as any;
+    const toolId = button.dataset.toolId as AppState['activeTool'] | undefined;
     if (toolId) {
+      if (toolId === 'levels') {
+        openLevelsTool(layout, state, renderer);
+        return;
+      }
+
       setActiveTool(state, toolId);
       
       // Update UI
       layout.sideBar.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('is-active'));
       button.classList.add('is-active');
     }
+  });
+}
+
+function openLevelsTool(
+  layout: AppLayout,
+  state: AppState,
+  renderer: ReturnType<typeof createCanvasRenderer>,
+): void {
+  const currentDocument = getCurrentDocument(state);
+
+  if (currentDocument === null) {
+    showError(NO_DOCUMENT_TO_SAVE_MESSAGE);
+    return;
+  }
+
+  if (document.querySelector('.levels-dialog-overlay') !== null) {
+    return;
+  }
+
+  openLevelsDialog(currentDocument, {
+    onPreviewChange: (imageDocument) => {
+      syncDocument(layout, state, renderer, imageDocument);
+    },
+    onApply: (imageDocument) => {
+      syncDocument(layout, state, renderer, imageDocument);
+    },
+    onCancel: (imageDocument) => {
+      syncDocument(layout, state, renderer, imageDocument);
+    },
   });
 }
 
@@ -400,6 +439,18 @@ function syncStatusBar(layout: AppLayout, imageDocument: ImageDocument): void {
     colorDepth: imageDocument.colorDepth,
     hasMask: imageDocument.hasMask,
   });
+}
+
+function syncDocument(
+  layout: AppLayout,
+  state: AppState,
+  renderer: ReturnType<typeof createCanvasRenderer>,
+  imageDocument: ImageDocument,
+): void {
+  setCurrentDocument(state, imageDocument);
+  renderer.setDocument(imageDocument);
+  updateChannelPreviews(layout.channelsPanel, imageDocument);
+  syncStatusBar(layout, imageDocument);
 }
 
 function containsFiles(event: DragEvent): boolean {

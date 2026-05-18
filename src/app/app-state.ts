@@ -1,6 +1,6 @@
 import type { ImageDocument } from '../core/types/image-document';
 
-export type AppTool = 'pointer' | 'eyedropper';
+export type AppTool = 'pointer' | 'eyedropper' | 'levels';
 
 export interface AppChannels {
   r: boolean;
