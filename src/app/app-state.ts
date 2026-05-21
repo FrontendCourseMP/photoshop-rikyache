@@ -4,7 +4,7 @@ import {
   type InterpolationMethod,
 } from '../core/interpolation/interpolation-types';
 
-export type AppTool = 'pointer' | 'eyedropper' | 'levels' | 'resize';
+export type AppTool = 'pointer' | 'eyedropper' | 'levels' | 'resize' | 'filter';
 
 export interface AppChannels {
   r: boolean;

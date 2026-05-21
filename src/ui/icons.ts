@@ -31,4 +31,10 @@ export const ICONS = {
       <path d="M9 9h13v4h-6.2l8.6 8.6-2.8 2.8-8.6-8.6V22H9V9Zm17 0h13v13h-4v-6.2l-8.6 8.6-2.8-2.8 8.6-8.6H26V9ZM21.6 23.6l2.8 2.8-8.6 8.6H22v4H9V26h4v6.2l8.6-8.6Zm4.8 2.8 2.8-2.8 8.6 8.6V26h4v13H29v-4h6.2l-8.8-8.6Z"/>
     </svg>
   `,
+  filter: `
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M8 11h32v4H8v-4Zm4 11h24v4H12v-4Zm7 11h10v4H19v-4Z"/>
+      <path d="M35 30a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z"/>
+    </svg>
+  `,
 } as const;

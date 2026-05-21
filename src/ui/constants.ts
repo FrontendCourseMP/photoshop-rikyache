@@ -3,6 +3,7 @@ export const TOOL_BUTTON_TITLES = [
   'Пипетка',
   'Уровни',
   'Размер',
+  'Фильтр',
 ] as const;
 
 export const TOOL_IDS = [
@@ -10,6 +11,7 @@ export const TOOL_IDS = [
   'eyedropper',
   'levels',
   'resize',
+  'filter',
 ] as const;
 
 export const FILE_INPUT_ACCEPT = '.png,.jpg,.jpeg,.gb7';

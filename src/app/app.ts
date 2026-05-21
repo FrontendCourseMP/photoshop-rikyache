@@ -35,6 +35,7 @@ import { applyThemeVariables } from '../theme/apply-theme';
 import { THEME_LAYOUT } from '../theme/layout';
 import { createLayout, type AppLayout } from '../ui/layout';
 import { updateChannelPreviews } from '../ui/channels';
+import { openFilterDialog } from '../ui/filter-dialog';
 import { openLevelsDialog } from '../ui/levels-dialog';
 import { openResizeDialog } from '../ui/resize-dialog';
 import { showError } from '../ui/notifications';
@@ -110,12 +111,46 @@ function bindToolSwitching(
         return;
       }
 
+      if (toolId === 'filter') {
+        openFilterTool(layout, state, renderer);
+        return;
+      }
+
       setActiveTool(state, toolId);
       
       // Update UI
       layout.sideBar.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('is-active'));
       button.classList.add('is-active');
     }
+  });
+}
+
+function openFilterTool(
+  layout: AppLayout,
+  state: AppState,
+  renderer: ReturnType<typeof createCanvasRenderer>,
+): void {
+  const currentDocument = getCurrentDocument(state);
+
+  if (currentDocument === null) {
+    showError(NO_DOCUMENT_TO_SAVE_MESSAGE);
+    return;
+  }
+
+  if (document.querySelector('.filter-dialog-overlay') !== null) {
+    return;
+  }
+
+  openFilterDialog(currentDocument, {
+    onPreviewChange: (imageDocument) => {
+      syncDocument(layout, state, renderer, imageDocument);
+    },
+    onApply: (imageDocument) => {
+      syncDocument(layout, state, renderer, imageDocument);
+    },
+    onCancel: (imageDocument) => {
+      syncDocument(layout, state, renderer, imageDocument);
+    },
   });
 }
 
