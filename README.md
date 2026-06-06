@@ -5,7 +5,7 @@
 
 ## Деплой
 
-https://incomparable-youtiao-0a8162.netlify.app/
+https://gorgeous-sfogliatella-6a1f41.netlify.app/
 
 ## Технологии
 
