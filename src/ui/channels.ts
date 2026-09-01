@@ -4,8 +4,18 @@ import type { ImageDocument } from '../core/types/image-document';
 
 export interface ChannelPanelElements {
   root: HTMLElement;
-  channels: Map<keyof AppChannels, { item: HTMLElement; canvas: HTMLCanvasElement }>;
+  channels: Map<DisplayChannel, { item: HTMLElement; canvas: HTMLCanvasElement }>;
 }
+
+export type DisplayChannel = keyof AppChannels | 'gray';
+
+const CHANNEL_CONFIGS: { id: DisplayChannel; label: string }[] = [
+  { id: 'gray', label: 'Серый (Gray)' },
+  { id: 'r', label: 'Красный (R)' },
+  { id: 'g', label: 'Зеленый (G)' },
+  { id: 'b', label: 'Синий (B)' },
+  { id: 'a', label: 'Альфа (A)' },
+];
 
 export function createChannelsPanel(): ChannelPanelElements {
   const root = createElement('aside', 'channels-panel');
@@ -13,17 +23,12 @@ export function createChannelsPanel(): ChannelPanelElements {
   title.textContent = 'Каналы';
   root.appendChild(title);
 
-  const channels = new Map<keyof AppChannels, { item: HTMLElement; canvas: HTMLCanvasElement }>();
-  const channelConfigs: { id: keyof AppChannels; label: string }[] = [
-    { id: 'r', label: 'Красный (R)' },
-    { id: 'g', label: 'Зеленый (G)' },
-    { id: 'b', label: 'Синий (B)' },
-    { id: 'a', label: 'Альфа (A)' },
-  ];
+  const channels = new Map<DisplayChannel, { item: HTMLElement; canvas: HTMLCanvasElement }>();
 
-  channelConfigs.forEach(config => {
+  CHANNEL_CONFIGS.forEach(config => {
     const item = createElement('div', 'channel-item');
     item.classList.add('is-active');
+    item.hidden = true;
     item.dataset.channelId = config.id;
 
     const canvas = document.createElement('canvas');
@@ -43,25 +48,46 @@ export function createChannelsPanel(): ChannelPanelElements {
 
 export function updateChannelPreviews(
   elements: ChannelPanelElements,
-  document: ImageDocument | null
+  imageDocument: ImageDocument | null,
+  channelsState: AppChannels,
 ): void {
-  if (!document) {
-    elements.channels.forEach(({ canvas }) => {
+  if (!imageDocument) {
+    elements.channels.forEach(({ item, canvas }) => {
+      item.hidden = true;
       const ctx = canvas.getContext('2d');
       if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
     });
     return;
   }
 
-  elements.channels.forEach(({ canvas }, channelId) => {
+  const availableChannels = new Set<DisplayChannel>(
+    imageDocument.colorModel === 'grayscale'
+      ? ['gray', ...(imageDocument.hasAlpha ? (['a'] as const) : [])]
+      : ['r', 'g', 'b', ...(imageDocument.hasAlpha ? (['a'] as const) : [])],
+  );
+
+  elements.channels.forEach(({ item, canvas }, channelId) => {
+    item.hidden = !availableChannels.has(channelId);
+
+    if (item.hidden) {
+      return;
+    }
+
+    const isActive =
+      channelId === 'gray'
+        ? channelsState.r && channelsState.g && channelsState.b
+        : channelsState[channelId];
+    item.classList.toggle('is-active', isActive);
+    item.classList.toggle('is-disabled', !isActive);
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    canvas.width = document.width;
-    canvas.height = document.height;
+    canvas.width = imageDocument.width;
+    canvas.height = imageDocument.height;
 
-    const imageData = ctx.createImageData(document.width, document.height);
-    const pixels = document.pixels;
+    const imageData = ctx.createImageData(imageDocument.width, imageDocument.height);
+    const pixels = imageDocument.pixels;
     const data = imageData.data;
 
     for (let i = 0; i < pixels.length; i += 4) {
@@ -70,7 +96,9 @@ export function updateChannelPreviews(
       const b = pixels[i + 2];
       const a = pixels[i + 3];
 
-      if (channelId === 'r') {
+      if (channelId === 'gray') {
+        data[i] = r; data[i+1] = r; data[i+2] = r; data[i+3] = 255;
+      } else if (channelId === 'r') {
         data[i] = r; data[i+1] = 0; data[i+2] = 0; data[i+3] = 255;
       } else if (channelId === 'g') {
         data[i] = 0; data[i+1] = g; data[i+2] = 0; data[i+3] = 255;

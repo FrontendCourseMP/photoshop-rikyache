@@ -45,8 +45,6 @@ export function applyLevelsToDocument(
 
   return {
     ...imageDocument,
-    hasAlpha: detectAlpha(pixels),
-    hasMask: detectMask(pixels),
     pixels,
   };
 }
@@ -63,26 +61,6 @@ function applyChannelLevels(
   const adjusted = Math.pow(normalized, gamma);
 
   return Math.round(adjusted * 255);
-}
-
-function detectAlpha(pixels: Uint8ClampedArray): boolean {
-  for (let index = 3; index < pixels.length; index += 4) {
-    if (pixels[index] < 255) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function detectMask(pixels: Uint8ClampedArray): boolean {
-  for (let index = 3; index < pixels.length; index += 4) {
-    if (pixels[index] < 128) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 function clamp01(value: number): number {

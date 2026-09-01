@@ -6,6 +6,7 @@ import {
   OPEN_FILE_ERROR_FALLBACK,
   SAVE_AS_PROMPT_MESSAGE,
   SAVE_FILE_ERROR_FALLBACK,
+  SAVE_SUCCESS_MESSAGE,
   UNSUPPORTED_FORMAT_MESSAGE,
 } from './constants';
 import {
@@ -34,7 +35,7 @@ import type { ImageDocument, ImageFormat } from '../core/types/image-document';
 import { applyThemeVariables } from '../theme/apply-theme';
 import { THEME_LAYOUT } from '../theme/layout';
 import { createLayout, type AppLayout } from '../ui/layout';
-import { updateChannelPreviews } from '../ui/channels';
+import { updateChannelPreviews, type DisplayChannel } from '../ui/channels';
 import { openFilterDialog } from '../ui/filter-dialog';
 import { openLevelsDialog } from '../ui/levels-dialog';
 import { openResizeDialog } from '../ui/resize-dialog';
@@ -70,10 +71,19 @@ function bindChannelsEvents(
     const item = (event.target as HTMLElement).closest('.channel-item') as HTMLElement;
     if (!item) return;
 
-    const channelId = item.dataset.channelId as keyof AppChannels;
+    const channelId = item.dataset.channelId as DisplayChannel | undefined;
     if (channelId) {
-      const newValue = !state.channels[channelId];
-      setChannels(state, { [channelId]: newValue });
+      const isActive =
+        channelId === 'gray'
+          ? state.channels.r && state.channels.g && state.channels.b
+          : state.channels[channelId];
+      const newValue = !isActive;
+
+      if (channelId === 'gray') {
+        setChannels(state, { r: newValue, g: newValue, b: newValue });
+      } else {
+        setChannels(state, { [channelId]: newValue });
+      }
       
       // Update UI
       if (newValue) {
@@ -411,6 +421,14 @@ async function openFile(
 
     const fitScalePercent = renderer.getFitScalePercent(imageDocument, 50);
 
+    const initialChannels: AppChannels = {
+      r: true,
+      g: true,
+      b: true,
+      a: imageDocument.hasAlpha,
+    };
+    setChannels(state, initialChannels);
+    renderer.setChannels(initialChannels);
     setViewScalePercent(state, fitScalePercent);
     renderer.setViewScalePercent(fitScalePercent);
     updateZoomStatus(layout.statusBar, fitScalePercent);
@@ -445,6 +463,7 @@ async function saveCurrentDocument(
     );
 
     downloadBlob(blob, fileName);
+    window.alert(SAVE_SUCCESS_MESSAGE);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : SAVE_FILE_ERROR_FALLBACK;
@@ -474,6 +493,7 @@ async function saveCurrentDocumentAs(
     const fileName = replaceFileExtension(currentDocument.name, requestedFormat);
 
     downloadBlob(blob, fileName);
+    window.alert(SAVE_SUCCESS_MESSAGE);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : SAVE_FILE_ERROR_FALLBACK;
@@ -534,7 +554,7 @@ function syncDocument(
 ): void {
   setCurrentDocument(state, imageDocument);
   renderer.setDocument(imageDocument);
-  updateChannelPreviews(layout.channelsPanel, imageDocument);
+  updateChannelPreviews(layout.channelsPanel, imageDocument, state.channels);
   syncStatusBar(layout, imageDocument);
 }
 

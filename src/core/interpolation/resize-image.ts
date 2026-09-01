@@ -25,8 +25,6 @@ export function resizeImageDocument(
     width: targetWidth,
     height: targetHeight,
     pixels,
-    hasAlpha: hasTransparentPixels(pixels),
-    hasMask: hasMaskPixels(pixels),
   };
 }
 
@@ -150,26 +148,6 @@ function mapTargetCoordinate(
     0,
     sourceSize - 1,
   );
-}
-
-function hasTransparentPixels(pixels: Uint8ClampedArray): boolean {
-  for (let index = 3; index < pixels.length; index += CHANNEL_COUNT) {
-    if (pixels[index] < 255) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function hasMaskPixels(pixels: Uint8ClampedArray): boolean {
-  for (let index = 3; index < pixels.length; index += CHANNEL_COUNT) {
-    if (pixels[index] < 128) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 function lerp(start: number, end: number, weight: number): number {

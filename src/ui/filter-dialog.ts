@@ -23,14 +23,23 @@ const CHANNEL_LABELS: Record<FilterChannel, string> = {
   a: 'Alpha',
 };
 
+type FilterChannelOption = FilterChannel | 'gray';
+
+const FILTER_CHANNEL_LABELS: Record<FilterChannelOption, string> = {
+  ...CHANNEL_LABELS,
+  gray: 'Gray',
+};
+
 const DEFAULT_EDGE_HANDLING: EdgeHandling = 'copy';
 const DEFAULT_PRESET_ID = 'identity';
+const CUSTOM_PRESET_ID = 'custom';
 
 export function openFilterDialog(
   imageDocument: ImageDocument,
   callbacks: FilterDialogCallbacks,
 ): void {
   const originalDocument = cloneImageDocument(imageDocument);
+  const availableChannels = getAvailableChannels(originalDocument);
   let previewEnabled = true;
   let activePreviewRequest = 0;
 
@@ -45,10 +54,13 @@ export function openFilterDialog(
   header.append(title, closeButton);
 
   const presetSelect = createSelect(
-    KERNEL_PRESETS.map((preset) => ({
-      value: preset.id,
-      label: preset.label,
-    })),
+    [
+      ...KERNEL_PRESETS.map((preset) => ({
+        value: preset.id,
+        label: preset.label,
+      })),
+      { value: CUSTOM_PRESET_ID, label: 'Пользовательское' },
+    ],
   );
   presetSelect.value = DEFAULT_PRESET_ID;
 
@@ -71,17 +83,17 @@ export function openFilterDialog(
 
   const channelGroup = createElement('fieldset', 'filter-channel-group');
   const channelLegend = createElement('legend', undefined, 'Каналы');
-  const channelCheckboxes = new Map<FilterChannel, HTMLInputElement>();
+  const channelCheckboxes = new Map<FilterChannelOption, HTMLInputElement>();
   const channelList = createElement('div', 'filter-channel-list');
 
-  for (const channel of FILTER_CHANNELS) {
+  for (const channel of availableChannels) {
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
-    checkbox.checked = true;
+    checkbox.checked = channel !== 'a';
     channelCheckboxes.set(channel, checkbox);
 
     const label = createElement('label', 'filter-channel-option');
-    label.append(checkbox, createElement('span', undefined, CHANNEL_LABELS[channel]));
+    label.append(checkbox, createElement('span', undefined, FILTER_CHANNEL_LABELS[channel]));
     channelList.appendChild(label);
   }
 
@@ -133,7 +145,10 @@ export function openFilterDialog(
   edgeSelect.addEventListener('change', schedulePreview);
 
   for (const input of kernelInputs) {
-    input.addEventListener('input', schedulePreview);
+    input.addEventListener('input', () => {
+      presetSelect.value = CUSTOM_PRESET_ID;
+      schedulePreview();
+    });
   }
 
   for (const checkbox of channelCheckboxes.values()) {
@@ -158,8 +173,8 @@ export function openFilterDialog(
     previewCheckbox.checked = true;
     previewEnabled = true;
 
-    for (const checkbox of channelCheckboxes.values()) {
-      checkbox.checked = true;
+    for (const [channel, checkbox] of channelCheckboxes) {
+      checkbox.checked = channel !== 'a';
     }
 
     applySelectedPreset();
@@ -228,11 +243,11 @@ export function openFilterDialog(
 
   function readFilterOptions(): KernelFilterOptions | null {
     const selectedPreset = findSelectedPreset();
-    const channels = FILTER_CHANNELS.filter(
+    const selectedChannelOptions = availableChannels.filter(
       (channel) => channelCheckboxes.get(channel)?.checked,
     );
 
-    if (channels.length === 0) {
+    if (selectedChannelOptions.length === 0) {
       statusText.textContent = 'Выберите хотя бы один канал.';
       return null;
     }
@@ -244,10 +259,14 @@ export function openFilterDialog(
       return null;
     }
 
+    const channels = selectedChannelOptions.flatMap((channel) =>
+      channel === 'gray' ? (['r', 'g', 'b'] as FilterChannel[]) : [channel],
+    );
+
     statusText.textContent = '';
 
     return {
-      mode: selectedPreset.mode,
+      mode: selectedPreset?.mode ?? 'kernel',
       kernel,
       channels,
       edgeHandling: edgeSelect.value as EdgeHandling,
@@ -257,6 +276,15 @@ export function openFilterDialog(
   function applySelectedPreset(): void {
     const selectedPreset = findSelectedPreset();
 
+    if (selectedPreset === undefined) {
+      for (const input of kernelInputs) {
+        input.disabled = false;
+      }
+
+      kernelGrid.classList.remove('is-disabled');
+      return;
+    }
+
     for (let index = 0; index < kernelInputs.length; index += 1) {
       kernelInputs[index].value = formatKernelValue(selectedPreset.kernel[index]);
       kernelInputs[index].disabled = selectedPreset.mode === 'median';
@@ -265,11 +293,8 @@ export function openFilterDialog(
     kernelGrid.classList.toggle('is-disabled', selectedPreset.mode === 'median');
   }
 
-  function findSelectedPreset(): { mode: FilterMode; kernel: number[] } {
-    return (
-      KERNEL_PRESETS.find((preset) => preset.id === presetSelect.value) ??
-      KERNEL_PRESETS[0]
-    );
+  function findSelectedPreset(): { mode: FilterMode; kernel: number[] } | undefined {
+    return KERNEL_PRESETS.find((preset) => preset.id === presetSelect.value);
   }
 
   function setProcessing(isProcessing: boolean): void {
@@ -279,13 +304,20 @@ export function openFilterDialog(
     edgeSelect.disabled = isProcessing;
 
     for (const input of kernelInputs) {
-      input.disabled = isProcessing || findSelectedPreset().mode === 'median';
+      input.disabled = isProcessing || findSelectedPreset()?.mode === 'median';
     }
 
     for (const checkbox of channelCheckboxes.values()) {
       checkbox.disabled = isProcessing;
     }
   }
+}
+
+function getAvailableChannels(imageDocument: ImageDocument): FilterChannelOption[] {
+  const colorChannels: FilterChannelOption[] =
+    imageDocument.colorModel === 'grayscale' ? ['gray'] : [...FILTER_CHANNELS.slice(0, 3)];
+
+  return imageDocument.hasAlpha ? [...colorChannels, 'a'] : colorChannels;
 }
 
 function createKernelInput(): HTMLInputElement {

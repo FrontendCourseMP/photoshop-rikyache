@@ -30,6 +30,7 @@ export async function decodeGb7File(file: File): Promise<ImageDocument> {
     height: header.height,
     colorDepth: 7,
     sourceFormat: 'gb7',
+    colorModel: 'grayscale',
     hasMask: header.hasMask,
     hasAlpha: header.hasMask,
     pixels,

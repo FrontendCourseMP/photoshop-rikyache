@@ -114,6 +114,10 @@ body {
   transition: border-color 0.2s ease, opacity 0.2s ease;
 }
 
+.channel-item[hidden] {
+  display: none;
+}
+
 .channel-item:hover {
   background: var(--color-button-ghost-hover);
 }

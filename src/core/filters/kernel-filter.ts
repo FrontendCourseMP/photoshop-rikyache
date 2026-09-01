@@ -64,8 +64,6 @@ export async function applyKernelFilter(
   return {
     ...imageDocument,
     pixels: targetPixels,
-    hasAlpha: hasTransparentPixels(targetPixels),
-    hasMask: hasMaskPixels(targetPixels),
   };
 }
 
@@ -167,26 +165,6 @@ function validateKernel(kernel: number[]): void {
 
 function getPixelIndex(x: number, y: number, width: number): number {
   return (y * width + x) * CHANNEL_COUNT;
-}
-
-function hasTransparentPixels(pixels: Uint8ClampedArray): boolean {
-  for (let index = 3; index < pixels.length; index += CHANNEL_COUNT) {
-    if (pixels[index] < 255) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function hasMaskPixels(pixels: Uint8ClampedArray): boolean {
-  for (let index = 3; index < pixels.length; index += CHANNEL_COUNT) {
-    if (pixels[index] < 128) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 function yieldToBrowser(): Promise<void> {

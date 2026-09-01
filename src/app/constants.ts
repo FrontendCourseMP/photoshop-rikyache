@@ -13,6 +13,7 @@ export const UNSUPPORTED_FORMAT_MESSAGE =
   'Формат файла не поддерживается. Доступны PNG, JPG, JPEG и GB7.';
 export const OPEN_FILE_ERROR_FALLBACK = 'Не удалось открыть файл.';
 export const SAVE_FILE_ERROR_FALLBACK = 'Не удалось сохранить файл.';
+export const SAVE_SUCCESS_MESSAGE = 'Изображение успешно сохранено.';
 export const NO_DOCUMENT_TO_SAVE_MESSAGE = 'Сначала загрузите изображение.';
 export const SAVE_AS_PROMPT_MESSAGE =
   'Выберите формат сохранения: png, jpg или gb7';

@@ -33,14 +33,6 @@ const CHANNEL_LABELS: Record<LevelsChannel, string> = {
   alpha: 'Alpha',
 };
 
-const CHANNEL_OPTIONS: LevelsChannel[] = [
-  'master',
-  'red',
-  'green',
-  'blue',
-  'alpha',
-];
-
 export function openLevelsDialog(
   imageDocument: ImageDocument,
   callbacks: LevelsDialogCallbacks,
@@ -48,6 +40,7 @@ export function openLevelsDialog(
   const originalDocument = cloneImageDocument(imageDocument);
   const maxLevel = getLevelsMaxValue(originalDocument);
   const levels = createDefaultLevelsState(maxLevel);
+  const channelOptions = getAvailableChannels(originalDocument);
 
   let activeChannel: LevelsChannel = 'master';
   let histogramScale: HistogramScale = 'linear';
@@ -65,9 +58,12 @@ export function openLevelsDialog(
 
   const controls = createElement('div', 'levels-dialog-controls');
   const channelSelect = createSelect(
-    CHANNEL_OPTIONS.map((channel) => ({
+    channelOptions.map((channel) => ({
       value: channel,
-      label: CHANNEL_LABELS[channel],
+      label:
+        channel === 'master' && originalDocument.colorModel === 'grayscale'
+          ? 'Gray'
+          : CHANNEL_LABELS[channel],
     })),
   ) as HTMLSelectElement;
   const scaleSelect = createSelect([
@@ -173,7 +169,7 @@ export function openLevelsDialog(
   resetButton.addEventListener('click', () => {
     const defaults = createDefaultLevelsState(maxLevel);
 
-    for (const channel of CHANNEL_OPTIONS) {
+    for (const channel of channelOptions) {
       levels[channel] = defaults[channel];
     }
 
@@ -275,6 +271,15 @@ export function openLevelsDialog(
     gammaReadout.value.textContent = channelLevels.gamma.toFixed(2);
     whiteReadout.value.textContent = String(channelLevels.whitePoint);
   }
+}
+
+function getAvailableChannels(imageDocument: ImageDocument): LevelsChannel[] {
+  const colorChannels: LevelsChannel[] =
+    imageDocument.colorModel === 'grayscale'
+      ? ['master']
+      : ['master', 'red', 'green', 'blue'];
+
+  return imageDocument.hasAlpha ? [...colorChannels, 'alpha'] : colorChannels;
 }
 
 function drawHistogram(
